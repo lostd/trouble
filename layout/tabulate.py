@@ -1,3 +1,7 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2011-2020 Sergey Astanin and contributors
+
 # -*- coding: utf-8 -*-
 
 """Pretty-print tabular data."""
