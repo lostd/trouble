@@ -111,8 +111,12 @@ fd = open("{}/isolated".format(base_path))
 isolated = expand_range_list(fd.read().strip())
 fd.close()
 
-headers = ['Socket', 'Core', 'CPU', 'Tasks', 'CPU', 'Tasks']
-colalign = ("right", "right", "right", "left", "right", "left")
+headers = ['Socket', 'Core']
+colalign = ("right", "right")
+cpus = core_map[(0, 0)]
+for cpu in cpus:
+    headers += ('CPU', 'Tasks')
+    colalign += ("right", "left")
 table = []
 for s in sorted(sockets):
     for c in sorted(cores):
