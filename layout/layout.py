@@ -12,8 +12,28 @@
 # Isolated CPUs are annotated with an asterisk.
 
 import os
+import re
 import sys
+import time
 from tabulate import tabulate, SEPARATING_LINE
+
+
+def get_cpu_idle():
+    """Collects idle time for all CPUs
+    """
+    fd = open("/proc/stat")
+    stat = fd.read()
+    fd.close()
+    cpu_idle = {}
+    lines = stat.strip().split('\n')
+    for line in lines:
+        elems = line.split()
+        match = re.match('cpu([0-9]+)', elems[0])
+        if match:
+            cpu = int(match.group(1))
+            idle = int(elems[4])
+            cpu_idle[cpu] = idle
+    return cpu_idle
 
 
 def get_pids(program):
@@ -111,12 +131,18 @@ fd = open("{}/isolated".format(base_path))
 isolated = expand_range_list(fd.read().strip())
 fd.close()
 
+user_hz = os.sysconf('SC_CLK_TCK')
+delay = 1.0
+idle_a = get_cpu_idle()
+time.sleep(delay)
+idle_b = get_cpu_idle()
+
 headers = ['Socket', 'Core']
 colalign = ("right", "right")
 cpus = core_map[(0, 0)]
 for cpu in cpus:
-    headers += ('CPU', 'Tasks')
-    colalign += ("right", "left")
+    headers += ('CPU', 'Busy', 'Tasks')
+    colalign += ("right", "right", "left")
 table = []
 for s in sorted(sockets):
     for c in sorted(cores):
@@ -127,12 +153,20 @@ for s in sorted(sockets):
             continue
         row = [s, c]
         for cpu in cpus:
+            idle = idle_b[cpu] - idle_a[cpu]
+            idle /= user_hz
+            idle /= delay
+            idle = min(idle, 1)
+            idle = max(idle, 0)
+            busy = 1 - idle
+            busy *= 100
             tasks = task_map.get(cpu) or []
             tasks = sorted(tasks, key=str.lower)
             if cpu in isolated:
                 row.append("*{}".format(cpu))
             else:
                 row.append("{}".format(cpu))
+            row.append("{:.0f}%".format(busy))
             row.append('\n'.join(tasks))
         table.append(row)
     table.append(SEPARATING_LINE)
